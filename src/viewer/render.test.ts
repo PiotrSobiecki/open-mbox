@@ -1,4 +1,4 @@
-import { formatBytes, formatDate, toSafeSrcDoc } from "./render";
+import { blobType, formatBytes, formatDate, toSafeSrcDoc, viewableType } from "./render";
 
 describe("formatBytes", () => {
 	it.each([
@@ -40,5 +40,53 @@ describe("toSafeSrcDoc", () => {
 
 	it("leaves the message markup untouched", () => {
 		expect(doc.endsWith('<img src="https://tracker.example/pixel.gif">')).toBe(true);
+	});
+});
+
+describe("viewableType", () => {
+	it.each([
+		["application/pdf", "umowa.pdf", "application/pdf"],
+		["application/octet-stream", "Umowa.PDF", "application/pdf"],
+		["image/jpg", "zdjecie", "image/jpeg"],
+		["text/csv; charset=windows-1250", "dane.csv", "text/plain"],
+		["application/json", "eksport", "text/plain"],
+		["video/mp4", "film.mp4", "video/mp4"],
+	])("opens %s named %s as %s", (mimeType, filename, expected) => {
+		expect(viewableType(mimeType, filename)).toBe(expected);
+	});
+
+	it.each([
+		["text/html", "strona.html"],
+		["image/svg+xml", "logo.svg"],
+		["application/octet-stream", "strona.htm"],
+		["application/zip", "archiwum.zip"],
+		["application/vnd.openxmlformats-officedocument.wordprocessingml.document", "pismo.docx"],
+		["application/octet-stream", "bez-rozszerzenia"],
+	])("downloads %s named %s instead of opening it", (mimeType, filename) => {
+		expect(viewableType(mimeType, filename)).toBeNull();
+	});
+
+	it("trusts a safe declared type over a risky extension", () => {
+		// Shown as an image, the bytes cannot run as a page whatever the name claims.
+		expect(viewableType("image/png", "zaproszenie.html")).toBe("image/png");
+	});
+});
+
+describe("blobType", () => {
+	const bytes = (values: number[]) => new Uint8Array(values).buffer;
+
+	it("declares UTF-8 for text that is valid UTF-8", () => {
+		expect(blobType("text/plain", new TextEncoder().encode("Zażółć").buffer)).toBe(
+			"text/plain;charset=utf-8",
+		);
+	});
+
+	it("leaves the charset to the browser for text in another encoding", () => {
+		// "Zażółć" in Windows-1250 is not valid UTF-8.
+		expect(blobType("text/plain", bytes([0x5a, 0x61, 0xbf, 0xf3, 0xb3, 0xe6]))).toBe("text/plain");
+	});
+
+	it("passes every other type through", () => {
+		expect(blobType("application/pdf", bytes([0x25, 0x50]))).toBe("application/pdf");
 	});
 });

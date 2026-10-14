@@ -7,7 +7,7 @@ A viewer for `.mbox` mail archives — Gmail Takeout, Thunderbird, Apple Mail ex
 - Opens archives of any size by streaming them; the message list fills in while the file is still being read.
 - Decodes every message in the charset it declares (ISO-8859-2, Windows-1250, UTF-8…) and shows Gmail labels.
 - Searches subject, sender, body, or all of them plus attachment names.
-- Lists each message's attachments and downloads them; images the message embeds (`cid:`) show inside it.
+- Lists each message's attachments. PDFs, images, text, audio and video open in a new tab; anything else, HTML and SVG included, downloads, and every openable file has a download button too. Images the message embeds (`cid:`) show inside it.
 - Renders HTML mail in an empty-sandbox iframe under a policy that blocks scripts and every network request, so remote images and tracking pixels never load.
 
 The interface is in Polish.

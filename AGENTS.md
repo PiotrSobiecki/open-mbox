@@ -26,7 +26,7 @@ A viewer for `.mbox` mail archives that runs in the browser: the file is streame
 
 - `src/pages/index.astro` — the only page: the layout plus `<Viewer client:only="react" />`
 - `src/mailbox/` — the domain module: `createMailbox(source)` (mbox splitting on bytes, MIME parsing, search; opening a message or an attachment re-reads its byte range from `source`) and the worker protocol. `worker.ts` owns a mailbox off the main thread; `client.ts` is the UI-side handle. Tests: `src/mailbox/index.test.ts`
-- `src/viewer/` — the React UI. `render.ts` holds the pure helpers, including `toSafeSrcDoc`, the policy every HTML mail body renders under
+- `src/viewer/` — the React UI. `render.ts` holds the pure helpers, including `toSafeSrcDoc`, the policy every HTML mail body renders under, and `viewableType`, the allowlist of attachment formats that may open in a tab (served under a type it picks, never the one the message declares)
 - `src/pages/` — file-based routes (`.astro`, `.md`, or `.ts` for endpoints)
 - `src/pages/api/` — Astro API endpoints, one file per route or `[...slug].ts` for catch-all
 - `src/pages/api/health.ts` — the exemplar endpoint: parses, delegates, responds, nothing else

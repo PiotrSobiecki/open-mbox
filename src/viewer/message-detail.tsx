@@ -1,8 +1,8 @@
 import { useState } from "react";
-import type { AttachmentFile, AttachmentInfo, MailMessage } from "@/mailbox";
+import type { AttachmentFile, MailMessage } from "@/mailbox";
 import type { Loaded } from "@/mailbox/client";
-import { Paperclip } from "./paperclip";
-import { formatBytes, formatDate, toSafeSrcDoc } from "./render";
+import { Attachments } from "./attachments";
+import { formatDate, toSafeSrcDoc } from "./render";
 
 interface MessageDetailProps {
 	message: MailMessage;
@@ -75,65 +75,4 @@ export function MessageDetail({ message, onBack, loadAttachment }: MessageDetail
 			</div>
 		</>
 	);
-}
-
-interface AttachmentsProps {
-	attachments: AttachmentInfo[];
-	load: (index: number) => Promise<Loaded<AttachmentFile>>;
-}
-
-function Attachments({ attachments, load }: AttachmentsProps) {
-	const [busy, setBusy] = useState<number | null>(null);
-	const [error, setError] = useState<string | null>(null);
-	if (attachments.length === 0) return null;
-
-	const download = async (attachment: AttachmentInfo) => {
-		setBusy(attachment.index);
-		setError(null);
-		try {
-			const result = await load(attachment.index);
-			if (result.ok) saveFile(result.value);
-			else setError(`Nie udało się pobrać „${attachment.filename}”: ${result.error}`);
-		} finally {
-			setBusy(null);
-		}
-	};
-
-	return (
-		<>
-			<ul className="attachments" aria-label="Załączniki">
-				{attachments.map((attachment) => (
-					<li key={attachment.index}>
-						<button
-							type="button"
-							className="attachment"
-							title={`Pobierz ${attachment.filename}`}
-							disabled={busy === attachment.index}
-							onClick={() => void download(attachment)}
-						>
-							<Paperclip />
-							<span className="attachment-name">{attachment.filename}</span>
-							<span className="attachment-size">{formatBytes(attachment.size)}</span>
-						</button>
-					</li>
-				))}
-			</ul>
-			{error && (
-				<p className="attachment-error" role="alert">
-					{error}
-				</p>
-			)}
-		</>
-	);
-}
-
-/** Hands the bytes to the browser's download flow; nothing is opened or rendered. */
-function saveFile(file: AttachmentFile): void {
-	const url = URL.createObjectURL(new Blob([file.content], { type: file.mimeType }));
-	const link = document.createElement("a");
-	link.href = url;
-	link.download = file.filename;
-	link.click();
-	// The download starts asynchronously; revoking the URL at once can cancel it.
-	setTimeout(() => URL.revokeObjectURL(url), 60_000);
 }

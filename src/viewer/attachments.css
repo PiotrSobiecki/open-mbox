@@ -1,0 +1,85 @@
+/* —— Attachments —— */
+.paperclip {
+	width: 0.9em;
+	height: 0.9em;
+	flex-shrink: 0;
+}
+
+.msg-attachments {
+	display: inline-flex;
+	align-items: center;
+	gap: 0.2rem;
+}
+
+.attachments {
+	display: flex;
+	flex-wrap: wrap;
+	gap: 0.5rem;
+	margin: 0.75rem 0 0;
+	padding: 0;
+	list-style: none;
+}
+
+.attachment {
+	display: inline-flex;
+	max-width: 100%;
+	border: 1px solid var(--border);
+	border-radius: 8px;
+	background: var(--bg-elevated);
+	font-size: 0.8rem;
+	overflow: hidden;
+}
+
+.attachment:hover {
+	border-color: var(--accent);
+}
+
+.attachment-main,
+.attachment-download {
+	display: inline-flex;
+	align-items: center;
+	gap: 0.4rem;
+	padding: 0.4rem 0.7rem;
+	transition: background 0.1s;
+}
+
+.attachment-main {
+	min-width: 0;
+}
+
+.attachment-download {
+	padding-inline: 0.55rem;
+	border-left: 1px solid var(--border);
+	color: var(--text-muted);
+}
+
+.attachment-main:hover,
+.attachment-download:hover {
+	background: var(--bg-hover);
+	color: var(--text);
+}
+
+.attachment-main:disabled,
+.attachment-download:disabled {
+	opacity: 0.6;
+	cursor: progress;
+}
+
+.attachment-name {
+	max-width: 18rem;
+	overflow: hidden;
+	text-overflow: ellipsis;
+	white-space: nowrap;
+}
+
+.attachment-size {
+	color: var(--text-muted);
+	font-family: var(--mono);
+	font-size: 0.7rem;
+}
+
+.attachment-error {
+	margin: 0.5rem 0 0;
+	color: var(--danger);
+	font-size: 0.85rem;
+}
