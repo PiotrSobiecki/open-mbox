@@ -1,6 +1,6 @@
 # open-mbox
 
-> Astro (SSR) on Cloudflare Workers, with Tailwind v4 and an optional Drizzle + Neon data layer enabled by `pnpm run init-project --with-db`.
+> A viewer for `.mbox` mail archives that runs in the browser: the file is streamed into a Web Worker, parsed and searched there, and never uploaded. Astro serves the page from Cloudflare Workers; the viewer itself is one React island. Generated from the Auditmos astro-on-cf template, without its data layer.
 
 ## Project
 
@@ -19,7 +19,7 @@
 - [Astro API Endpoints](.claude/rules/api/astro-endpoints.md): File layout, Handler shape, Conventions, When to add Hono, Don't
 
 ### frontend
-- [Astro](.claude/rules/frontend/astro.md): Pages, layouts, components, Server vs client, API endpoints, Cloudflare runtime access (Astro v6 + `@astrojs/cloudflare` v13), Data fetching, Content collections (when adding markdown), Generated files — never edit
+- [Astro](.claude/rules/frontend/astro.md): Pages, layouts, components, Server vs client, API endpoints, Cloudflare runtime access (Astro v7 + `@astrojs/cloudflare` v14), Data fetching, Content collections (when adding markdown), Generated files — never edit
 - [Tailwind CSS v4](.claude/rules/frontend/tailwind-v4.md): Setup in this template, Customizing the theme, Custom utilities, Variants & states, Don't
 
 ## Agents

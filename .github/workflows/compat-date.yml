@@ -2,7 +2,7 @@ name: Compatibility date freshness
 
 on:
   schedule:
-    - cron: "0 7 * * 1" # Monday 07:00 UTC — one hour after deps-update
+    - cron: "0 12 * * 3" # Wednesday 12:00 UTC (14:00 CEST / 13:00 CET), with Dependabot
   workflow_dispatch:
 
 permissions:

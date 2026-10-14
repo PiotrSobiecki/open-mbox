@@ -1,0 +1,75 @@
+name: Deploy
+
+# Started by hand from the Actions tab, never by a push: deploys stay a decision, as in
+# the template. The CI gates run first, so a red tree does not reach Cloudflare.
+on:
+  workflow_dispatch:
+    inputs:
+      environment:
+        description: "Cloudflare environment"
+        type: choice
+        options:
+          - production
+          - staging
+        default: production
+
+permissions:
+  contents: read
+
+concurrency:
+  group: deploy-${{ inputs.environment }}
+  cancel-in-progress: false
+
+env:
+  # Future-proof: opt into Node 24 for JS actions before GH forces it (2026-06-02 default, 2026-09-16 hard cutoff)
+  FORCE_JAVASCRIPT_ACTIONS_TO_NODE24: true
+  # Hooks are a local dev net; see ci.yml.
+  SKIP_SIMPLE_GIT_HOOKS: "1"
+
+jobs:
+  deploy:
+    name: Deploy to ${{ inputs.environment }}
+    runs-on: ubuntu-latest
+    timeout-minutes: 20
+    environment:
+      name: ${{ inputs.environment }}
+      url: ${{ vars.SITE_URL }}
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v7
+        with:
+          persist-credentials: false
+
+      - name: Setup pnpm
+        uses: pnpm/action-setup@v6
+
+      - name: Setup Node.js
+        uses: actions/setup-node@v7
+        with:
+          node-version: "24"
+          cache: pnpm
+
+      - name: Install dependencies
+        run: pnpm install --frozen-lockfile
+
+      - name: Lint
+        run: pnpm run lint:ci
+
+      - name: Type check
+        run: pnpm run types
+
+      - name: Test
+        run: pnpm run test
+
+      - name: Knip
+        run: pnpm run knip
+
+      # The deploy script builds first. SITE_URL is an optional per-environment
+      # variable (Settings → Environments); unset, canonical URLs follow the request.
+      - name: Build and deploy
+        run: pnpm run "deploy:${DEPLOY_ENV}"
+        env:
+          DEPLOY_ENV: ${{ inputs.environment }}
+          SITE_URL: ${{ vars.SITE_URL }}
+          CLOUDFLARE_API_TOKEN: ${{ secrets.CLOUDFLARE_API_TOKEN }}
+          CLOUDFLARE_ACCOUNT_ID: ${{ secrets.CLOUDFLARE_ACCOUNT_ID }}

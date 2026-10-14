@@ -30,24 +30,14 @@
  *   reverse and is a decision for a real domain, not for a template.
  * - `x-content-type-options` — no MIME sniffing.
  * - `referrer-policy` — full URL to same origin, bare origin cross-origin.
- * - `x-frame-options` — no framing. `frame-ancestors` in a content-security-policy
- *   supersedes this header, so a clone that enables the policy below can drop it.
+ * - `x-frame-options` — no framing. The content security policy says the same with
+ *   `frame-ancestors`; this header stays for browsers that predate it.
  * - `permissions-policy` — the powerful features this template does not use.
  *   Denying them costs nothing here and is one edit away for a clone that does.
  *
- * The content-security-policy is deliberately **not** in this set. A useful policy
- * depends on what each clone adds — an analytics snippet, an interactive island,
- * an embedded frame — and one inherited from a template breaks on the first of
- * them, in production, with an empty page and a console error as the only clue.
- * An absent policy is a known gap; a broken one is a debugging session. Start from
- * this and tighten it against your own build:
- *
- *   "content-security-policy":
- *     "default-src 'self'; img-src 'self' data:; style-src 'self' 'unsafe-inline'; " +
- *     "script-src 'self'; frame-ancestors 'none'; base-uri 'self'; form-action 'self'",
- *
- * Report-only first (`content-security-policy-report-only`) is the cheap way in:
- * the browser reports what the policy would have blocked without blocking it.
+ * The content-security-policy is **not** in this set: it is `security.csp` in
+ * astro.config.mjs, because it carries hashes of the inline scripts Astro emits and
+ * only the build knows them. Astro sets that header itself.
  */
 export const SECURITY_HEADERS = {
 	"strict-transport-security": "max-age=31536000; includeSubDomains",

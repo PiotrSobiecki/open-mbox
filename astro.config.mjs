@@ -1,14 +1,17 @@
 // @ts-check
 import cloudflare from "@astrojs/cloudflare";
+import react from "@astrojs/react";
 import tailwindcss from "@tailwindcss/vite";
 import { defineConfig } from "astro/config";
 
 // https://astro.build/config
 export default defineConfig({
 	output: "server",
+
 	// Astro 7 defaults to "jsx", which drops the newline between text and an inline
-	// element ("via<code>" in index.astro). "true" is the v6 behaviour.
+	// element. "true" is the v6 behaviour.
 	compressHTML: true,
+
 	// The origin canonical URLs, the sitemap and robots.txt resolve against. Read
 	// from the environment because the value is per-clone and per-environment, and
 	// baked at build time — `SITE_URL=https://staging.example.com pnpm deploy:staging`
@@ -17,7 +20,36 @@ export default defineConfig({
 	// The fallback is a placeholder on purpose: it is visibly wrong in a sitemap,
 	// where a plausible-looking guess would not be. Unset, the endpoints and the
 	// layout fall back to the origin the request arrived on rather than to this.
-	site: process.env.SITE_URL ?? "https://example.com",
+	// `||`, not `??`: GitHub Actions passes an unset variable as an empty string.
+	site: process.env.SITE_URL || "https://example.com",
+
+	// The page's content security policy. It lives here rather than in
+	// src/security-headers/ because only Astro knows the hashes of the inline scripts
+	// it emits for island hydration; for pages rendered on demand, which is every page
+	// here, Astro sends it as a response header. HTML mail renders in a srcdoc iframe,
+	// which inherits this policy: img-src is what keeps remote images and tracking
+	// pixels from loading, and style-src stays 'unsafe-inline' because mail is styled
+	// inline (Astro then emits no style hashes, which would cancel it). font-src allows
+	// data: because the build inlines the smallest font subsets.
+	security: {
+		csp: {
+			scriptDirective: { resources: ["'self'"] },
+			styleDirective: { resources: ["'self'", "'unsafe-inline'"] },
+			directives: [
+				"default-src 'self'",
+				"img-src 'self' data:",
+				"font-src 'self' data:",
+				"connect-src 'self'",
+				"worker-src 'self'",
+				"frame-src 'none'",
+				"object-src 'none'",
+				"base-uri 'self'",
+				"form-action 'none'",
+				"frame-ancestors 'none'",
+			],
+		},
+	},
+
 	adapter: cloudflare({
 		// Left unset, the adapter picks `cloudflare-binding` and writes an
 		// `images: { binding: "IMAGES" }` into its generated config that nobody
@@ -33,10 +65,13 @@ export default defineConfig({
 		// https://developers.cloudflare.com/images/transform-images/bindings/
 		imageService: { build: "compile", runtime: "passthrough" },
 	}),
+
 	vite: {
 		plugins: [tailwindcss()],
 		// Emits .js.map alongside the Worker bundle. wrangler.jsonc sets
 		// upload_source_maps so production stack traces resolve to source.
 		build: { sourcemap: true },
 	},
+
+	integrations: [react()],
 });

@@ -1,6 +1,6 @@
 {
 	"$schema": "https://unpkg.com/knip@6/schema.json",
-	"entry": ["src/pages/**/*.{astro,ts}", "scripts/*.ts", "taze.config.ts"],
+	"entry": ["src/pages/**/*.{astro,ts}", "scripts/*.ts"],
 	"project": ["src/**/*.{ts,tsx,astro}", "scripts/**/*.ts"],
 	"ignore": ["src/__fixtures__/**"],
 	"ignoreDependencies": [
@@ -17,9 +17,8 @@
 		// Stack dependency, not an exemplar dependency: the endpoint rules and the
 		// README both prescribe Zod at every boundary, so it must outlive any single
 		// importer. Without this, deleting the exemplar (src/health/ +
-		// src/pages/api/health.ts) turned knip red on an unused dep. Two importers
-		// remain — the exemplar and scripts/majors-report-lib.ts, which validates
-		// taze's output shape — so the entry is currently belt and braces.
+		// src/pages/api/health.ts) turned knip red on an unused dep. The exemplar is its
+		// only importer left, which is the case this entry exists for.
 		"zod"
 	]
 }

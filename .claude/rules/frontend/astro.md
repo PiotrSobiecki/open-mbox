@@ -12,7 +12,7 @@
 - Astro components run **server-side at request time** by default (this template uses `output: "server"` on Cloudflare Workers).
 - Top frontmatter (`---` block) runs on the server only — DB calls, env access, secrets all fine.
 - Hydrate islands with `client:load`, `client:idle`, `client:visible`, `client:media`, `client:only="<framework>"`. Default is **no JS shipped** — only add directives when you need client interactivity.
-- This template has no framework integrations (React/Vue/Svelte) by default. Add them with `pnpm astro add react` (etc.) when you actually need an island.
+- React is installed (`@astrojs/react`) for the viewer island. Add other frameworks with `pnpm astro add <name>` only when an island needs one.
 
 ## API endpoints
 
@@ -21,9 +21,9 @@
 - Validate input with Zod at the endpoint boundary. Return `400` on parse failure with the error message in body.
 - For multi-route APIs use `[...slug].ts` catch-all + a small dispatcher.
 
-## Cloudflare runtime access (Astro v6 + `@astrojs/cloudflare` v13)
+## Cloudflare runtime access (Astro v7 + `@astrojs/cloudflare` v14)
 
-- Access bindings via `import { env } from "cloudflare:workers"` — this is now the only supported path in Astro v6. The old `Astro.locals.runtime.env` was removed.
+- Access bindings via `import { env } from "cloudflare:workers"` — the only supported path since Astro v6. The old `Astro.locals.runtime.env` was removed.
 - For request-scoped values: `Astro.request.cf` (CF metadata), global `caches`, `Astro.locals.cfContext` (ExecutionContext).
 - `env` is typed automatically via `worker-configuration.d.ts`. Re-run `pnpm cf-typegen` after editing `wrangler.jsonc` bindings.
 

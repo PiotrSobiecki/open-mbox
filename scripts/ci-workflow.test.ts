@@ -10,7 +10,7 @@
  * cannot be silently removed by a later edit to the workflow files. See issue #18.
  */
 
-import { readFileSync } from "node:fs";
+import { readdirSync, readFileSync } from "node:fs";
 import { resolve } from "node:path";
 import { parse } from "yaml";
 
@@ -92,73 +92,70 @@ describe("release workflow", () => {
 	});
 });
 
-describe("deps-update workflow", () => {
-	const deps = readWorkflow("deps-update.yml");
+/**
+ * Dependabot replaces the template's taze workflows: one bot, on the day and hour the
+ * owner chose. Majors stay out of the grouped PR so each one is reviewed on its own.
+ */
+describe("dependabot", () => {
+	type Update = {
+		"package-ecosystem"?: string;
+		schedule?: Record<string, string>;
+		groups?: Record<string, { "update-types"?: string[] }>;
+	};
+	const config = parse(readFileSync(resolve(WORKFLOW_DIR, "..", "dependabot.yml"), "utf8")) as {
+		updates?: Update[];
+	};
+	const updates = config.updates ?? [];
 
-	it.each(REQUIRED_CHECKS)("validates the bump with the %s", (_label, command) => {
-		expect(runsCommand(deps, command)).toBe(true);
+	it.each(["npm", "github-actions"])(
+		"updates %s every Wednesday at 14:00 Warsaw time",
+		(ecosystem) => {
+			const update = updates.find((u) => u["package-ecosystem"] === ecosystem);
+			expect(update?.schedule).toEqual({
+				interval: "weekly",
+				day: "wednesday",
+				time: "14:00",
+				timezone: "Europe/Warsaw",
+			});
+		},
+	);
+
+	it.each(["npm", "github-actions"])("groups only minor and patch updates for %s", (ecosystem) => {
+		const update = updates.find((u) => u["package-ecosystem"] === ecosystem);
+		const grouped = Object.values(update?.groups ?? {}).flatMap((g) => g["update-types"] ?? []);
+		expect(grouped.sort()).toEqual(["minor", "patch"]);
 	});
 
-	it("opens its pull request with a token that can trigger CI", () => {
-		// GitHub deliberately suppresses workflow runs for events raised by the
-		// default GITHUB_TOKEN, so a bot PR authenticated with it alone shows no
-		// checks. A PAT falls back to GITHUB_TOKEN when unset, keeping the
-		// workflow functional on a fresh clone that has not created one.
-		const openPr = steps(deps).find((step) =>
-			step.uses?.startsWith("peter-evans/create-pull-request"),
-		);
-		expect(String(openPr?.with?.token)).toMatch(/secrets\.DEPS_UPDATE_TOKEN/);
-	});
-
-	it("does not install git hooks into the runner", () => {
-		expect(deps.env?.SKIP_SIMPLE_GIT_HOOKS).toBe("1");
+	it("is the only dependency bot", () => {
+		expect(readdirSync(WORKFLOW_DIR)).not.toContain("deps-update.yml");
 	});
 });
 
 /**
- * The majors-report workflow (issue #27).
- *
- * It exists because the weekly bot runs in minor mode, so majors accumulate where
- * nobody looks. Two properties are asserted rather than reviewed: it runs on a
- * schedule, and it *reports* — a step that wrote package.json would turn a
- * surfacing job into an unreviewed upgrade, which is the one thing the phase
- * promised not to do.
+ * The deploy workflow: a button, not a trigger. It must refuse to ship a tree that
+ * fails any gate, and it must never run on a push.
  */
-describe("majors-report workflow", () => {
-	const majors = readWorkflow("majors-report.yml");
-	const commands = runCommands(majors);
+describe("deploy workflow", () => {
+	const deploy = readWorkflow("deploy.yml");
+	const commands = runCommands(deploy);
+	const deployAt = commands.findIndex((run) => run.includes('pnpm run "deploy:'));
+	const GATES = REQUIRED_CHECKS.filter(([label]) => label !== "production build");
 
-	it("runs on a schedule, so majors surface without anyone remembering to look", () => {
-		const schedule = majors.on?.schedule as { cron?: string }[] | undefined;
-		expect(schedule?.[0]?.cron).toBeTruthy();
+	it("runs only when started by hand", () => {
+		expect(Object.keys(deploy.on ?? {})).toEqual(["workflow_dispatch"]);
 	});
 
-	it("can also be run by hand, so the report is reproducible on demand", () => {
-		expect(majors.on).toHaveProperty("workflow_dispatch");
+	it.each(GATES)("runs the %s before deploying", (_label, command) => {
+		const at = commands.findIndex((run) => run.includes(command));
+		expect(at).toBeGreaterThanOrEqual(0);
+		expect(deployAt).toBeGreaterThan(at);
 	});
 
-	it("may write issues, and only issues", () => {
-		const permissions = (majors as { permissions?: Record<string, string> }).permissions;
-		expect(permissions?.issues).toBe("write");
-		expect(permissions?.contents).toBe("read");
-	});
-
-	it("runs the reporter", () => {
-		expect(runsCommand(majors, "deps:major:report")).toBe(true);
-	});
-
-	it("performs no upgrade — this job makes majors visible, it does not take them", () => {
-		const writes = commands.filter((run) =>
-			/deps:major:update|deps:update|taze[^\n]*(-w\b|--write)/.test(run),
-		);
-		expect(writes).toEqual([]);
-	});
-
-	it("opens no pull request, since there is no change to propose", () => {
-		expect(steps(majors).filter((step) => step.uses?.includes("create-pull-request"))).toEqual([]);
+	it("deploys through the package scripts, which build first", () => {
+		expect(deployAt).toBeGreaterThanOrEqual(0);
 	});
 
 	it("does not install git hooks into the runner", () => {
-		expect(majors.env?.SKIP_SIMPLE_GIT_HOOKS).toBe("1");
+		expect(deploy.env?.SKIP_SIMPLE_GIT_HOOKS).toBe("1");
 	});
 });
