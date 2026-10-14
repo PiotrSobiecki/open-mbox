@@ -1,3 +1,11 @@
+## [1.0.1](https://github.com/PiotrSobiecki/open-mbox/compare/v1.0.0...v1.0.1) (2026-10-14)
+
+
+### Bug Fixes
+
+* build for the environment each deploy script targets ([19069a3](https://github.com/PiotrSobiecki/open-mbox/commit/19069a37ff71370526a1913fea59f28cd1800948))
+* canonical URLs follow the request when SITE_URL is unset ([0bc9ec9](https://github.com/PiotrSobiecki/open-mbox/commit/0bc9ec9849ba046d4c5e6204e52ce549bc04d35d))
+
 # 1.0.0 (2026-10-14)
 
 
