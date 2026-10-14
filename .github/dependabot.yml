@@ -13,9 +13,9 @@ updates:
       time: "14:00"
       timezone: "Europe/Warsaw"
     open-pull-requests-limit: 10
+    # "include: scope" appends (deps) or (deps-dev) itself: chore(deps): bump …
     commit-message:
-      prefix: "chore(deps)"
-      prefix-development: "chore(deps-dev)"
+      prefix: "chore"
       include: "scope"
     labels:
       - "dependencies"
@@ -40,7 +40,7 @@ updates:
       timezone: "Europe/Warsaw"
     open-pull-requests-limit: 5
     commit-message:
-      prefix: "chore(ci)"
+      prefix: "ci"
       include: "scope"
     labels:
       - "dependencies"
