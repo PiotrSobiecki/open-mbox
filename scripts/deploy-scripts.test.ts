@@ -149,6 +149,17 @@ describe("package.json deploy scripts", () => {
 		expect(bare).toEqual([]);
 	});
 
+	it("builds for the environment it deploys to", () => {
+		// The Cloudflare Vite plugin bakes the environment in at build time, and
+		// wrangler refuses an --env that differs from the one the build used.
+		const mismatched = deployScripts.filter(([, command]) => {
+			const built = command.match(/CLOUDFLARE_ENV=(\S+)/)?.[1];
+			const deployed = command.match(/--env[= ](\S+)/)?.[1];
+			return !built || built !== deployed;
+		});
+		expect(mismatched).toEqual([]);
+	});
+
 	it("targets only environments declared in wrangler.jsonc", () => {
 		const targeted = deployScripts.map(([name, command]) => {
 			const match = command.match(/--env[= ](\S+)/);
