@@ -1,3 +1,10 @@
+# [1.1.0](https://github.com/PiotrSobiecki/open-mbox/compare/v1.0.1...v1.1.0) (2026-10-14)
+
+
+### Features
+
+* list and download attachments, show inline images ([9c9ea89](https://github.com/PiotrSobiecki/open-mbox/commit/9c9ea8941d25fc2a81bd89b1bb15850d633febb1))
+
 ## [1.0.1](https://github.com/PiotrSobiecki/open-mbox/compare/v1.0.0...v1.0.1) (2026-10-14)
 
 
