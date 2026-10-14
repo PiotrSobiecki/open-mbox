@@ -6,6 +6,9 @@ import { defineConfig } from "astro/config";
 // https://astro.build/config
 export default defineConfig({
 	output: "server",
+	// Astro 7 defaults to "jsx", which drops the newline between text and an inline
+	// element ("via<code>" in index.astro). "true" is the v6 behaviour.
+	compressHTML: true,
 	// The origin canonical URLs, the sitemap and robots.txt resolve against. Read
 	// from the environment because the value is per-clone and per-environment, and
 	// baked at build time — `SITE_URL=https://staging.example.com pnpm deploy:staging`
