@@ -1,0 +1,25 @@
+{
+	"$schema": "https://unpkg.com/knip@6/schema.json",
+	"entry": ["src/pages/**/*.{astro,ts}", "scripts/*.ts", "taze.config.ts"],
+	"project": ["src/**/*.{ts,tsx,astro}", "scripts/**/*.ts"],
+	"ignore": ["src/__fixtures__/**"],
+	"ignoreDependencies": [
+		// Not a package, and not a leftover from a sibling template: `cloudflare:workers`
+		// is a Workers runtime module specifier that knip resolves to a package name and
+		// reports as an unlisted dependency. Its wrangler plugin only maps `main` to an
+		// entry and never learns the `cloudflare:` namespace, and ignoreUnresolved does
+		// not catch it either — this is the only knob that does. The suppression is kept
+		// honest by scripts/repo-hygiene.test.ts, which fails once no source file imports
+		// from the namespace.
+		"cloudflare",
+		// Consumed through CSS (`@import "tailwindcss"`), a channel knip does not follow.
+		"tailwindcss",
+		// Stack dependency, not an exemplar dependency: the endpoint rules and the
+		// README both prescribe Zod at every boundary, so it must outlive any single
+		// importer. Without this, deleting the exemplar (src/health/ +
+		// src/pages/api/health.ts) turned knip red on an unused dep. Two importers
+		// remain — the exemplar and scripts/majors-report-lib.ts, which validates
+		// taze's output shape — so the entry is currently belt and braces.
+		"zod"
+	]
+}

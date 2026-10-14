@@ -1,0 +1,103 @@
+name: Deps update
+
+on:
+  schedule:
+    - cron: "0 6 * * 1" # Monday 06:00 UTC (07:00/08:00 PL)
+  workflow_dispatch:
+
+permissions:
+  contents: write
+  pull-requests: write
+
+concurrency:
+  group: deps-update
+  cancel-in-progress: false
+
+env:
+  # Future-proof: opt into Node 24 for JS actions before GH forces it (2026-06-02 default, 2026-09-16 hard cutoff)
+  FORCE_JAVASCRIPT_ACTIONS_TO_NODE24: true
+  # `pnpm install` runs `prepare` -> simple-git-hooks, which installs the pre-push
+  # hook into the CI runner, where it then fires on every automated push
+  # (create-pull-request, semantic-release) and can reject the push over checks
+  # CI has already run. Hooks are a local dev net; the explicit steps below are
+  # the CI contract, and they report per-step instead of failing inside a push.
+  SKIP_SIMPLE_GIT_HOOKS: "1"
+
+jobs:
+  update:
+    name: Bump deps + open PR
+    runs-on: ubuntu-latest
+    timeout-minutes: 30
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v7
+
+      - name: Setup pnpm
+        uses: pnpm/action-setup@v6
+
+      - name: Setup Node.js
+        uses: actions/setup-node@v7
+        with:
+          # Explicit rather than lts/* — see the rationale in ci.yml. The three
+          # declarations of the Node major are asserted together by
+          # scripts/repo-hygiene.test.ts.
+          node-version: "24"
+          cache: pnpm
+
+      - name: Install (sanity check current state)
+        run: pnpm install --frozen-lockfile
+
+      - name: Update deps
+        run: pnpm run deps:update
+
+      - name: Refresh lockfile
+        run: pnpm install --no-frozen-lockfile
+
+      - name: Lint
+        run: pnpm run lint:ci
+
+      - name: Type check
+        run: pnpm run types
+
+      - name: Test
+        run: pnpm run test
+
+      - name: Knip
+        run: pnpm run knip
+
+      # Same gate as ci.yml: a bump that breaks the production build must not
+      # reach a PR looking green.
+      - name: Build
+        run: pnpm run build
+
+      - name: Open PR
+        uses: peter-evans/create-pull-request@v8
+        with:
+          # GitHub suppresses workflow runs for events raised by the default
+          # GITHUB_TOKEN, so a PR opened with it shows no checks at all. Set a
+          # DEPS_UPDATE_TOKEN repo secret (fine-grained PAT, contents +
+          # pull-requests write) and these PRs run the same CI as human ones.
+          # Falls back to GITHUB_TOKEN so a fresh clone still works untouched.
+          token: ${{ secrets.DEPS_UPDATE_TOKEN || secrets.GITHUB_TOKEN }}
+          branch: chore/deps-update
+          delete-branch: true
+          commit-message: "chore(deps): weekly minor + patch bumps"
+          title: "chore(deps): weekly minor + patch bumps"
+          body: |
+            Automated weekly run of `pnpm deps:update` (`taze -r -w`) +
+            `pnpm install`.
+
+            Validated by this job before opening the PR:
+            - `pnpm lint:ci`
+            - `pnpm types`
+            - `pnpm test`
+            - `pnpm knip`
+            - `pnpm build`
+
+            CI re-runs the same checks on this PR when a `DEPS_UPDATE_TOKEN`
+            secret is configured. Without it the PR falls back to
+            `secrets.GITHUB_TOKEN`, which GitHub does not let trigger
+            workflows — push an empty commit or click "Re-run all jobs".
+
+            Close this PR if anything looks off and run the bumps manually.
+          labels: dependencies, automated

@@ -1,0 +1,70 @@
+{
+	"name": "open-mbox",
+	"private": true,
+	"version": "0.0.0",
+	"type": "module",
+	"packageManager": "pnpm@12.6.0",
+	"engines": {
+		"node": ">=24.0.0"
+	},
+	"scripts": {
+		"prepare": "simple-git-hooks && wrangler types",
+		"init-project": "tsx scripts/init-project.ts",
+		"gen:llms-txt": "tsx scripts/generate-llms-txt.ts",
+		"dev": "astro dev --port 3000",
+		"build": "astro build",
+		"preview": "astro preview",
+		"astro": "astro",
+		"deploy:dev": "pnpm run build && wrangler deploy --env dev",
+		"deploy:staging": "pnpm run build && wrangler deploy --env staging",
+		"deploy:production": "pnpm run build && wrangler deploy --env production",
+		"cf-typegen": "wrangler types",
+		"test": "vitest run",
+		"test:watch": "vitest",
+		"test:coverage": "vitest run --coverage",
+		"types": "astro check && tsc --noEmit",
+		"lint": "biome check .",
+		"lint:fix": "biome check --write .",
+		"lint:ci": "biome ci .",
+		"knip": "knip",
+		"release": "semantic-release",
+		"release:dry": "semantic-release --dry-run",
+		"deps": "taze -r",
+		"deps:update": "taze -r -w",
+		"deps:major": "taze -r major",
+		"deps:major:update": "taze -r major -w",
+		"deps:major:report": "tsx scripts/report-majors.ts"
+	},
+	"dependencies": {
+		"@astrojs/cloudflare": "^13.7.0",
+		"@tailwindcss/vite": "^4.3.3",
+		"astro": "^6.4.8",
+		"tailwindcss": "^4.3.3",
+		"zod": "^4.4.3"
+	},
+	"devDependencies": {
+		"@astrojs/check": "^0.9.10",
+		"@biomejs/biome": "^2.4.4",
+		"@semantic-release/changelog": "^6.0.3",
+		"@semantic-release/git": "^10.0.1",
+		"@types/node": "^24.13.3",
+		"@vitest/coverage-v8": "^4.1.10",
+		"execa": "^9.6.1",
+		"knip": "^6.31.0",
+		"semantic-release": "^25.0.8",
+		"simple-git-hooks": "^2.13.1",
+		"taze": "^19.17.1",
+		"tsx": "^4.23.5",
+		"typescript": "^5.9.3",
+		"vitest": "^4.1.10",
+		"wrangler": "^4.118.0",
+		"yaml": "^2.9.0"
+	},
+	"overrides": {
+		"vite": "^7.3.6"
+	},
+	"simple-git-hooks": {
+		"pre-commit": "pnpm run lint:ci",
+		"pre-push": "pnpm run types && pnpm run knip"
+	}
+}

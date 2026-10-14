@@ -1,0 +1,2 @@
+# Production secrets — copy this to `.production.vars` and fill in.
+# Push to Cloudflare with `wrangler secret put <KEY> --env production`.

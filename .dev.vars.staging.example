@@ -1,0 +1,2 @@
+# Staging secrets — copy this to `.staging.vars` and fill in.
+# Push to Cloudflare with `wrangler secret put <KEY> --env staging`.

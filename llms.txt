@@ -1,0 +1,34 @@
+# open-mbox
+
+> Astro (SSR) on Cloudflare Workers, with Tailwind v4 and an optional Drizzle + Neon data layer enabled by `pnpm run init-project --with-db`.
+
+## Project
+
+- [Project overview](AGENTS.md): Stack, Project Structure, Commands, Architecture, Cloudflare runtime, Verification
+
+## Rules
+
+### General
+- [Atomic Import Edits](.claude/rules/atomic-imports.md): PostToolUse hooks (biome, eslint, etc.) may auto-delete "unused" imports between sequential edits.
+- [Cloudflare Deployment Rules](.claude/rules/cloudflare-deployment.md): Custom Domains vs Routes, HTTP→HTTPS Enforcement, SSL/TLS Mode, Debugging "Too Many Redirects"
+- [Deep Modules](.claude/rules/deep-modules.md): Principles, Application, Testing Corollary
+- [Error Handling](.claude/rules/error-handling.md): Layered Approach, Drizzle Error Unwrapping, Response Consistency
+- [Universal TypeScript Rules](.claude/rules/general.md): Type Safety, Error Handling, Naming, Array Access, Bug Fix Workflow
+
+### api
+- [Astro API Endpoints](.claude/rules/api/astro-endpoints.md): File layout, Handler shape, Conventions, When to add Hono, Don't
+
+### frontend
+- [Astro](.claude/rules/frontend/astro.md): Pages, layouts, components, Server vs client, API endpoints, Cloudflare runtime access (Astro v6 + `@astrojs/cloudflare` v13), Data fetching, Content collections (when adding markdown), Generated files — never edit
+- [Tailwind CSS v4](.claude/rules/frontend/tailwind-v4.md): Setup in this template, Customizing the theme, Custom utilities, Variants & states, Don't
+
+## Agents
+
+- [dd-i](.claude/agents/dd-i.md): Use this agent when the user wants to implement a feature or system from an existing design document, implementation plan, or specification file — a detailed doc that has to become code across multiple files.
+- [dd-w](.claude/agents/dd-w.md): Use this agent when the user requests design documentation, architecture documents, technical specifications, system design writeups, or implementation guides that should be persisted as a markdown file — from high-level overviews to detailed implementation plans.
+- [mvp-e](.claude/agents/mvp-e.md): MVP development advisor.
+
+## Commands
+
+- [implement](.claude/commands/implement.md): Use dd-i agent and implement design doc: $ARGUMENTS
+- [verify-dd](.claude/commands/verify-dd.md): Review all design docs in /docs for implementation readiness.

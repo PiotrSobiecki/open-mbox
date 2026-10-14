@@ -1,0 +1,56 @@
+name: Major upgrades report
+
+on:
+  schedule:
+    - cron: "0 8 * * 1" # Monday 08:00 UTC — after deps-update (06:00) and compat-date (07:00)
+  workflow_dispatch:
+
+# Reports only. This job never writes package.json and never opens a pull request:
+# the weekly bot takes minors, and a major is a decision someone makes on purpose.
+permissions:
+  contents: read
+  issues: write
+
+concurrency:
+  group: majors-report
+  cancel-in-progress: false
+
+env:
+  # Future-proof: opt into Node 24 for JS actions before GH forces it (2026-06-02 default, 2026-09-16 hard cutoff)
+  FORCE_JAVASCRIPT_ACTIONS_TO_NODE24: true
+  # `pnpm install` runs `prepare` -> simple-git-hooks, which installs the pre-push
+  # hook into the CI runner, where it then fires on every automated push and can
+  # reject it over checks CI has already run. Hooks are a local dev net.
+  SKIP_SIMPLE_GIT_HOOKS: "1"
+
+jobs:
+  report:
+    name: Report pending majors
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v7
+        with:
+          persist-credentials: false
+
+      - name: Setup pnpm
+        uses: pnpm/action-setup@v6
+
+      - name: Setup Node.js
+        uses: actions/setup-node@v7
+        with:
+          # Explicit rather than lts/* — see the rationale in ci.yml. The declarations
+          # of the Node major are asserted together by scripts/repo-hygiene.test.ts.
+          node-version: "24"
+          cache: pnpm
+
+      - name: Install dependencies
+        run: pnpm install --frozen-lockfile
+
+      # Opens the tracking issue the first time majors appear and rewrites the same
+      # one afterwards. A run with nothing pending opens nothing and edits nothing.
+      - name: Report pending majors
+        run: pnpm run deps:major:report
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}

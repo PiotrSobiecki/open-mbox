@@ -1,0 +1,52 @@
+# build output
+dist/
+# generated types
+.astro/
+worker-configuration.d.ts
+
+# dependencies
+node_modules/
+
+# logs
+npm-debug.log*
+yarn-debug.log*
+yarn-error.log*
+pnpm-debug.log*
+
+# environment variables
+.env
+.env.*
+!.env.example
+
+# per-environment vars (dotenvx + wrangler — .dev.vars.<env> convention)
+.dev.vars
+.dev.vars.*
+!.dev.vars.example
+!.dev.vars.staging.example
+!.dev.vars.production.example
+
+# macOS-specific files
+.DS_Store
+
+# jetbrains setting folder
+.idea/
+
+# wrangler files
+.wrangler/
+
+# test / coverage
+coverage/
+
+# Claude Code local state
+.claude/settings.local.json
+.claude/scheduled_tasks.lock
+.claude/skills/
+
+# Codex local state
+.codex/
+
+# Biome fixture staging (test-time only; cleaned up in try/finally)
+src/.biome-fixture-staging-*
+
+# mailbox archives hold other people's mail — never commit them
+*.mbox

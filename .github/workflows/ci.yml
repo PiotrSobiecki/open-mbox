@@ -1,0 +1,72 @@
+name: CI
+
+on:
+  pull_request:
+  push:
+    branches: [main]
+
+permissions:
+  contents: read
+
+concurrency:
+  # One run per ref. Superseded pushes to an open PR are cancelled; main is not,
+  # so every commit that can be released has its own recorded result.
+  group: ci-${{ github.ref }}
+  cancel-in-progress: ${{ github.event_name == 'pull_request' }}
+
+env:
+  # Future-proof: opt into Node 24 for JS actions before GH forces it (2026-06-02 default, 2026-09-16 hard cutoff)
+  FORCE_JAVASCRIPT_ACTIONS_TO_NODE24: true
+  # `pnpm install` runs `prepare` -> simple-git-hooks, which installs the pre-push
+  # hook into the CI runner, where it then fires on every automated push
+  # (create-pull-request, semantic-release) and can reject the push over checks
+  # CI has already run. Hooks are a local dev net; the explicit steps below are
+  # the CI contract, and they report per-step instead of failing inside a push.
+  SKIP_SIMPLE_GIT_HOOKS: "1"
+
+jobs:
+  checks:
+    name: Checks
+    runs-on: ubuntu-latest
+    timeout-minutes: 20
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v7
+        with:
+          persist-credentials: false
+
+      - name: Setup pnpm
+        uses: pnpm/action-setup@v6
+
+      - name: Setup Node.js
+        uses: actions/setup-node@v7
+        with:
+          # Explicit rather than lts/*: the engines floor, the @types/node major and
+          # the version CI runs have to agree, and lts/* silently walks away from them
+          # the day a new LTS lands — which is how they drifted apart before.
+          # scripts/repo-hygiene.test.ts fails when the three disagree, so moving Node
+          # majors is one reviewed edit instead of a surprise on a Tuesday.
+          node-version: "24"
+          cache: pnpm
+
+      - name: Install dependencies
+        run: pnpm install --frozen-lockfile
+
+      - name: Lint
+        run: pnpm run lint:ci
+
+      - name: Type check
+        run: pnpm run types
+
+      - name: Test
+        run: pnpm run test
+
+      - name: Knip
+        run: pnpm run knip
+
+      # The gate this workflow exists for. `astro check` + `tsc` type-check the
+      # sources but never run the adapter, so a change that breaks production
+      # compilation (bad CSS import, adapter-incompatible dependency, failing
+      # Vite plugin) passes every check above and fails only here.
+      - name: Build
+        run: pnpm run build

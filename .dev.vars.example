@@ -1,0 +1,7 @@
+# Local dev secrets — copy this to `.dev.vars` and fill in.
+# Loaded by:
+#   - `wrangler dev` (Cloudflare runtime locals.runtime.env)
+#   - `@dotenvx/dotenvx run -f .dev.vars -- <cmd>` (only when --with-db is enabled)
+#
+# Add DATABASE_HOST / DATABASE_USERNAME / DATABASE_PASSWORD below if you
+# ran `pnpm run init-project --with-db`.

@@ -1,0 +1,27 @@
+---
+import { env } from "cloudflare:workers";
+import Layout from "@/layouts/Layout.astro";
+
+const envLabel = env.CLOUDFLARE_ENV ?? "local";
+---
+
+<Layout title="astro-on-cf">
+	<main class="mx-auto flex min-h-screen max-w-3xl flex-col justify-center px-6 py-16">
+		<p class="mb-3 font-mono text-xs uppercase tracking-widest text-neutral-500">
+			env: {envLabel}
+		</p>
+		<h1 class="mb-4 text-4xl font-semibold tracking-tight sm:text-5xl">
+			Astro on Cloudflare
+		</h1>
+		<p class="mb-8 max-w-prose text-neutral-400">
+			Auditmos template — Astro 6 SSR on Cloudflare Workers, Tailwind v4, Biome,
+			knip, semantic-release. Optional Drizzle + Neon data layer via
+			<code class="rounded bg-neutral-900 px-1.5 py-0.5 font-mono text-sm">pnpm run init-project --with-db</code>.
+		</p>
+		<ul class="space-y-2 text-sm text-neutral-400">
+			<li>→ Edit <code class="font-mono text-neutral-200">src/pages/index.astro</code> to start</li>
+			<li>→ Add API endpoints under <code class="font-mono text-neutral-200">src/pages/api/</code></li>
+			<li>→ See <code class="font-mono text-neutral-200">AGENTS.md</code> for stack conventions</li>
+		</ul>
+	</main>
+</Layout>

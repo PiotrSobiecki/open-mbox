@@ -1,0 +1,156 @@
+name: Compatibility date freshness
+
+on:
+  schedule:
+    - cron: "0 7 * * 1" # Monday 07:00 UTC — one hour after deps-update
+  workflow_dispatch:
+
+permissions:
+  contents: write
+  pull-requests: write
+
+concurrency:
+  group: compat-date
+  cancel-in-progress: false
+
+env:
+  # Future-proof: opt into Node 24 for JS actions before GH forces it (2026-06-02 default, 2026-09-16 hard cutoff)
+  FORCE_JAVASCRIPT_ACTIONS_TO_NODE24: true
+  # `pnpm install` runs `prepare` -> simple-git-hooks, which installs the pre-push
+  # hook into the CI runner, where it then fires on every automated push
+  # (create-pull-request, semantic-release) and can reject the push over checks
+  # CI has already run. Hooks are a local dev net; the explicit steps below are
+  # the CI contract, and they report per-step instead of failing inside a push.
+  SKIP_SIMPLE_GIT_HOOKS: "1"
+  STALE_THRESHOLD_DAYS: "90"
+
+jobs:
+  bump:
+    name: Bump compatibility_date if stale
+    runs-on: ubuntu-latest
+    timeout-minutes: 20
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v7
+
+      - name: Inspect compatibility_date
+        id: dates
+        run: |
+          set -euo pipefail
+          CURRENT=$(grep -oE '"compatibility_date"[[:space:]]*:[[:space:]]*"[0-9]{4}-[0-9]{2}-[0-9]{2}"' wrangler.jsonc \
+            | head -1 \
+            | grep -oE '[0-9]{4}-[0-9]{2}-[0-9]{2}')
+          if [ -z "${CURRENT}" ]; then
+            echo "::error::Could not parse compatibility_date from wrangler.jsonc"
+            exit 1
+          fi
+          TODAY=$(date -u +%Y-%m-%d)
+          CURRENT_S=$(date -u -d "${CURRENT}" +%s)
+          TODAY_S=$(date -u -d "${TODAY}" +%s)
+          AGE_DAYS=$(( ( TODAY_S - CURRENT_S ) / 86400 ))
+
+          echo "current=${CURRENT}" >> "${GITHUB_OUTPUT}"
+          echo "today=${TODAY}" >> "${GITHUB_OUTPUT}"
+          echo "age_days=${AGE_DAYS}" >> "${GITHUB_OUTPUT}"
+          if [ "${AGE_DAYS}" -gt "${STALE_THRESHOLD_DAYS}" ]; then
+            echo "stale=true" >> "${GITHUB_OUTPUT}"
+            STALE_LABEL="yes — PR will be opened"
+          else
+            echo "stale=false" >> "${GITHUB_OUTPUT}"
+            STALE_LABEL="no — exiting cleanly"
+          fi
+
+          {
+            echo "## compatibility_date status"
+            echo ""
+            echo "| Field | Value |"
+            echo "|-------|-------|"
+            echo "| Current | \`${CURRENT}\` |"
+            echo "| Today (UTC) | \`${TODAY}\` |"
+            echo "| Age (days) | ${AGE_DAYS} |"
+            echo "| Threshold | ${STALE_THRESHOLD_DAYS} days |"
+            echo "| Stale | ${STALE_LABEL} |"
+          } >> "${GITHUB_STEP_SUMMARY}"
+
+      - name: Bump compatibility_date in wrangler.jsonc
+        if: steps.dates.outputs.stale == 'true'
+        run: |
+          set -euo pipefail
+          perl -i -pe 's/("compatibility_date"\s*:\s*")\d{4}-\d{2}-\d{2}(")/${1}${{ steps.dates.outputs.today }}${2}/' wrangler.jsonc
+          echo "::group::Diff"
+          git --no-pager diff wrangler.jsonc
+          echo "::endgroup::"
+
+      - name: Setup pnpm
+        if: steps.dates.outputs.stale == 'true'
+        uses: pnpm/action-setup@v6
+
+      - name: Setup Node.js
+        if: steps.dates.outputs.stale == 'true'
+        uses: actions/setup-node@v7
+        with:
+          # Explicit rather than lts/* — see the rationale in ci.yml. The three
+          # declarations of the Node major are asserted together by
+          # scripts/repo-hygiene.test.ts.
+          node-version: "24"
+          cache: pnpm
+
+      - name: Install
+        if: steps.dates.outputs.stale == 'true'
+        run: pnpm install --frozen-lockfile
+
+      - name: Regenerate Cloudflare types
+        if: steps.dates.outputs.stale == 'true'
+        run: pnpm run cf-typegen
+
+      - name: Lint
+        if: steps.dates.outputs.stale == 'true'
+        run: pnpm run lint:ci
+
+      - name: Type check
+        if: steps.dates.outputs.stale == 'true'
+        run: pnpm run types
+
+      - name: Test
+        if: steps.dates.outputs.stale == 'true'
+        run: pnpm run test
+
+      - name: Knip
+        if: steps.dates.outputs.stale == 'true'
+        run: pnpm run knip
+
+      - name: Build
+        if: steps.dates.outputs.stale == 'true'
+        run: pnpm run build
+
+      - name: Open PR
+        if: steps.dates.outputs.stale == 'true'
+        uses: peter-evans/create-pull-request@v8
+        with:
+          token: ${{ secrets.GITHUB_TOKEN }}
+          branch: chore/compat-date-bump
+          delete-branch: true
+          commit-message: "chore(wrangler): bump compatibility_date to ${{ steps.dates.outputs.today }}"
+          title: "chore(wrangler): bump compatibility_date to ${{ steps.dates.outputs.today }}"
+          body: |
+            Automated bump: `compatibility_date` was `${{ steps.dates.outputs.current }}`
+            (${{ steps.dates.outputs.age_days }} days old, > ${{ env.STALE_THRESHOLD_DAYS }}-day threshold).
+
+            Updated to today's UTC date: `${{ steps.dates.outputs.today }}`.
+
+            Validated by this job before opening the PR:
+            - `pnpm cf-typegen`
+            - `pnpm lint:ci`
+            - `pnpm types`
+            - `pnpm test`
+            - `pnpm knip`
+            - `pnpm build`
+
+            Reference: https://developers.cloudflare.com/workers/configuration/compatibility-dates/
+
+            Closes #1 when merged.
+
+            Note: `secrets.GITHUB_TOKEN` does not trigger CI on PRs it
+            creates. Push an empty commit or click "Re-run all jobs" to
+            kick CI.
+          labels: enhancement
