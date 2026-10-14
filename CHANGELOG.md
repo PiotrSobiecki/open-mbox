@@ -1,3 +1,10 @@
+# [1.2.0](https://github.com/PiotrSobiecki/open-mbox/compare/v1.1.0...v1.2.0) (2026-10-14)
+
+
+### Features
+
+* open attachments in a new tab, keep download as the second option ([b3f4900](https://github.com/PiotrSobiecki/open-mbox/commit/b3f4900ac7c13380b2f4e2e7a8a87a938651c7b7))
+
 # [1.1.0](https://github.com/PiotrSobiecki/open-mbox/compare/v1.0.1...v1.1.0) (2026-10-14)
 
 
