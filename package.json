@@ -40,25 +40,25 @@
 		"@tailwindcss/vite": "^4.3.3",
 		"astro": "^6.4.8",
 		"tailwindcss": "^4.3.3",
-		"zod": "^4.4.3"
+		"zod": "^4.6.7"
 	},
 	"devDependencies": {
 		"@astrojs/check": "^0.9.10",
-		"@biomejs/biome": "^2.4.4",
+		"@biomejs/biome": "^2.5.15",
 		"@semantic-release/changelog": "^6.0.3",
 		"@semantic-release/git": "^10.0.1",
-		"@types/node": "^24.13.3",
+		"@types/node": "^24.19.2",
 		"@vitest/coverage-v8": "^4.1.10",
 		"execa": "^9.6.1",
-		"knip": "^6.31.0",
-		"semantic-release": "^25.0.8",
-		"simple-git-hooks": "^2.13.1",
+		"knip": "^6.41.0",
+		"semantic-release": "^25.0.9",
+		"simple-git-hooks": "^2.14.0",
 		"taze": "^19.17.1",
-		"tsx": "^4.23.5",
+		"tsx": "^4.23.15",
 		"typescript": "^5.9.3",
 		"vitest": "^4.1.10",
-		"wrangler": "^4.118.0",
-		"yaml": "^2.9.0"
+		"wrangler": "^4.149.0",
+		"yaml": "^2.9.1"
 	},
 	"overrides": {
 		"vite": "^7.3.6"

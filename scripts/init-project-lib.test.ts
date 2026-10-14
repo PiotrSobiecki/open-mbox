@@ -25,13 +25,12 @@ import {
 describe("RENAME_TARGETS", () => {
 	const files = RENAME_TARGETS.map((target) => target.file);
 
-	it.each([
-		"package.json",
-		"wrangler.jsonc",
-		"llms.txt",
-	])("rewrites the project name in %s during scaffolding", (file) => {
-		expect(files).toContain(file);
-	});
+	it.each(["package.json", "wrangler.jsonc", "llms.txt"])(
+		"rewrites the project name in %s during scaffolding",
+		(file) => {
+			expect(files).toContain(file);
+		},
+	);
 });
 
 describe("stripJsonc", () => {

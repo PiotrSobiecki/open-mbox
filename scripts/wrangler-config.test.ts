@@ -127,13 +127,12 @@ describe("session binding", () => {
 });
 
 describe("assets routing", () => {
-	it.each([
-		"html_handling",
-		"not_found_handling",
-		"run_worker_first",
-	])("documents %s, so the current behaviour reads as chosen rather than defaulted", (option) => {
-		expect(wranglerSource).toContain(option);
-	});
+	it.each(["html_handling", "not_found_handling", "run_worker_first"])(
+		"documents %s, so the current behaviour reads as chosen rather than defaulted",
+		(option) => {
+			expect(wranglerSource).toContain(option);
+		},
+	);
 
 	it("leaves them commented — the defaults are the choice, not an oversight", () => {
 		expect(wranglerConfig.assets).toEqual({ directory: "./dist", binding: "ASSETS" });
