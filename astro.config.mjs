@@ -50,6 +50,10 @@ export default defineConfig({
 		},
 	},
 
+	// Nothing here uses Astro sessions. Left enabled, the adapter adds a SESSION KV
+	// binding and wrangler provisions an empty namespace on the first deploy.
+	session: false,
+
 	adapter: cloudflare({
 		// Left unset, the adapter picks `cloudflare-binding` and writes an
 		// `images: { binding: "IMAGES" }` into its generated config that nobody

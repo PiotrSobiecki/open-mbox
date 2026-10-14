@@ -48,6 +48,8 @@
 	// first deploy of a clone that touches Astro sessions fails for want of one.
 	// Declare it here and the adapter uses yours instead. Create the namespace with
 	// `wrangler kv namespace create SESSION`, then paste the id it prints.
+	// This project sets `session: false` in astro.config.mjs, so no SESSION binding
+	// is emitted; turning sessions on means undoing that and declaring the binding.
 	// "kv_namespaces": [
 	//   { "binding": "SESSION", "id": "<kv-namespace-id>" },
 	//   { "binding": "CACHE", "id": "<kv-namespace-id>" }
