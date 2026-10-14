@@ -17,11 +17,11 @@ export default defineConfig({
 	// baked at build time — `SITE_URL=https://staging.example.com pnpm deploy:staging`
 	// carries it through, since every deploy script builds first.
 	//
-	// The fallback is a placeholder on purpose: it is visibly wrong in a sitemap,
-	// where a plausible-looking guess would not be. Unset, the endpoints and the
-	// layout fall back to the origin the request arrived on rather than to this.
-	// `||`, not `??`: GitHub Actions passes an unset variable as an empty string.
-	site: process.env.SITE_URL || "https://example.com",
+	// Unset, `site` stays undefined and src/seo/ resolves against the origin the
+	// request arrived on. The template's "https://example.com" placeholder made that
+	// branch unreachable and shipped example.com as the canonical URL. `||`, not
+	// `??`: GitHub Actions passes an unset variable as an empty string.
+	site: process.env.SITE_URL || undefined,
 
 	// The page's content security policy. It lives here rather than in
 	// src/security-headers/ because only Astro knows the hashes of the inline scripts
