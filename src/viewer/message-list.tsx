@@ -1,4 +1,5 @@
 import type { MailSummary } from "@/mailbox";
+import { Paperclip } from "./paperclip";
 import { formatDate } from "./render";
 
 interface MessageListProps {
@@ -44,6 +45,12 @@ export function MessageList({
 						<div className="msg-subject">{message.subject}</div>
 						<div className="msg-meta">
 							<span>{formatDate(message.date, message.dateTs)}</span>
+							{message.attachmentCount > 0 && (
+								<span className="msg-attachments" title="Załączniki">
+									<Paperclip />
+									{message.attachmentCount}
+								</span>
+							)}
 						</div>
 						{message.preview && <div className="msg-preview">{message.preview}</div>}
 					</button>

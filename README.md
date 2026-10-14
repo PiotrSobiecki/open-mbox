@@ -6,7 +6,8 @@ A viewer for `.mbox` mail archives — Gmail Takeout, Thunderbird, Apple Mail ex
 
 - Opens archives of any size by streaming them; the message list fills in while the file is still being read.
 - Decodes every message in the charset it declares (ISO-8859-2, Windows-1250, UTF-8…) and shows Gmail labels.
-- Searches subject, sender, body, or all three.
+- Searches subject, sender, body, or all of them plus attachment names.
+- Lists each message's attachments and downloads them; images the message embeds (`cid:`) show inside it.
 - Renders HTML mail in an empty-sandbox iframe under a policy that blocks scripts and every network request, so remote images and tracking pixels never load.
 
 The interface is in Polish.
@@ -65,7 +66,7 @@ Path alias `@/*` resolves to `src/*`. `docs/` holds requirements and design docs
 
 ## How the archive stays local
 
-`src/viewer/` hands the chosen `File` to the worker in `src/mailbox/worker.ts`, which reads it with `File.stream()` and keeps the parsed messages in its own memory. The UI asks the worker for one page of search results or one message at a time. No code path sends file contents over the network, and the page's content security policy (`security.csp` in `astro.config.mjs`) limits `connect-src` to the site's own origin. Closing or reloading the tab discards everything.
+`src/viewer/` hands the chosen `File` to the worker in `src/mailbox/worker.ts`, which reads it with `File.stream()` and keeps an index in its own memory: headers, a capped body text, attachment names and each message's byte range. Opening a message or downloading an attachment reads that range from the same `File` again, so a large archive costs its index rather than its size. The UI asks the worker for one page of search results or one message at a time. No code path sends file contents over the network, and the page's content security policy (`security.csp` in `astro.config.mjs`) limits `connect-src` to the site's own origin. Closing or reloading the tab discards everything.
 
 HTML bodies render in an `<iframe sandbox="">` whose document starts with its own policy (`default-src 'none'`), so a message can neither run code nor fetch anything — a remote image is how a sender learns that, when and where a message was opened.
 

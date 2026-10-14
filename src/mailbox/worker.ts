@@ -1,20 +1,26 @@
 /**
  * The thread that owns the open mailbox. The file is streamed straight from disk into
- * the parser; nothing here touches the network, which is what keeps the archive on the
- * visitor's machine. Opening a second file abandons the first mid-read.
+ * the parser, and opening a message reads its bytes from the same File again; nothing
+ * here touches the network, which is what keeps the archive on the visitor's machine.
+ * Opening a second file abandons the first mid-read.
  */
 
-import { createMailbox, type Mailbox } from "./index";
+import { createMailbox, type Mailbox, type MailboxSource } from "./index";
 import type { WorkerRequest, WorkerResponse } from "./protocol";
 import type { MailboxStatus } from "./types";
 
 const STATUS_INTERVAL_MS = 250;
+const EMPTY_PAGE = { total: 0, items: [] };
 
-let mailbox: Mailbox = createMailbox();
+let mailbox: Mailbox | null = null;
 let generation = 0;
 
-function post(response: WorkerResponse): void {
-	self.postMessage(response);
+function post(response: WorkerResponse, transfer: Transferable[] = []): void {
+	self.postMessage(response, { transfer });
+}
+
+function describeError(error: unknown): string {
+	return error instanceof Error ? error.message : String(error);
 }
 
 self.addEventListener("message", (event: MessageEvent<WorkerRequest>) => {
@@ -24,20 +30,48 @@ self.addEventListener("message", (event: MessageEvent<WorkerRequest>) => {
 			void open(request.file);
 			return;
 		case "search":
-			post({ type: "search", requestId: request.requestId, page: mailbox.search(request.query) });
+			post({
+				type: "search",
+				requestId: request.requestId,
+				page: mailbox?.search(request.query) ?? EMPTY_PAGE,
+			});
 			return;
 		case "get":
-			post({
-				type: "get",
-				requestId: request.requestId,
-				message: mailbox.get(request.messageId) ?? null,
-			});
+			void get(request.requestId, request.messageId);
+			return;
+		case "attachment":
+			void attachment(request.requestId, request.messageId, request.index);
 	}
 });
 
+async function get(requestId: number, messageId: number): Promise<void> {
+	try {
+		const message = (await mailbox?.get(messageId)) ?? null;
+		post({ type: "get", requestId, message, error: null });
+	} catch (error) {
+		post({ type: "get", requestId, message: null, error: describeError(error) });
+	}
+}
+
+async function attachment(requestId: number, messageId: number, index: number): Promise<void> {
+	try {
+		const file = (await mailbox?.attachment(messageId, index)) ?? null;
+		post({ type: "attachment", requestId, file, error: null }, file ? [file.content] : []);
+	} catch (error) {
+		post({ type: "attachment", requestId, file: null, error: describeError(error) });
+	}
+}
+
+function fileSource(file: File): MailboxSource {
+	return {
+		read: async (offset, length) =>
+			new Uint8Array(await file.slice(offset, offset + length).arrayBuffer()),
+	};
+}
+
 async function open(file: File): Promise<void> {
 	const current = ++generation;
-	const box = createMailbox();
+	const box = createMailbox(fileSource(file));
 	mailbox = box;
 
 	let bytesRead = 0;
@@ -74,6 +108,6 @@ async function open(file: File): Promise<void> {
 		bytesRead = file.size;
 		report("ready");
 	} catch (error) {
-		report("error", error instanceof Error ? error.message : String(error));
+		report("error", describeError(error));
 	}
 }

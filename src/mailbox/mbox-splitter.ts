@@ -4,34 +4,46 @@
  * It works on bytes, not text: each message declares its own charset, and decoding the
  * whole archive as UTF-8 up front would mangle ISO-8859-2 or Windows-1250 bodies before
  * the MIME parser ever saw their headers. Chunks may end anywhere, mid-line included.
+ * Each message carries its offset in the stream, so it can be read again from the file.
  */
 
 const FROM_LINE = new TextEncoder().encode("From ");
 const LF = 0x0a;
 const EMPTY = new Uint8Array(0);
 
+export interface RawMessage {
+	offset: number;
+	bytes: Uint8Array;
+}
+
 export class MboxSplitter {
 	#parts: Uint8Array[] = [];
 	#started = false;
 	#atLineStart = true;
 	#carry: Uint8Array = EMPTY;
+	/** Stream offset of the next byte push() receives. */
+	#position = 0;
+	/** Stream offset where the message being collected begins. */
+	#start = 0;
 
 	/** Feeds the next chunk; returns the messages it completed. */
-	push(chunk: Uint8Array): Uint8Array[] {
-		return this.#scan(concat([this.#carry, chunk]), false);
+	push(chunk: Uint8Array): RawMessage[] {
+		const bufStart = this.#position - this.#carry.length;
+		this.#position += chunk.length;
+		return this.#scan(concat([this.#carry, chunk]), bufStart, false);
 	}
 
 	/** Flushes the last message. Input without any "From " line is one message (.eml). */
-	end(): Uint8Array[] {
-		const done = this.#scan(this.#carry, true);
+	end(): RawMessage[] {
+		const done = this.#scan(this.#carry, this.#position - this.#carry.length, true);
 		const last = concat(this.#parts);
 		this.#parts = [];
-		if (this.#started || hasContent(last)) done.push(last);
-		return done.filter(hasContent);
+		if (this.#started || hasContent(last)) done.push({ offset: this.#start, bytes: last });
+		return done.filter((message) => hasContent(message.bytes));
 	}
 
-	#scan(buf: Uint8Array, final: boolean): Uint8Array[] {
-		const done: Uint8Array[] = [];
+	#scan(buf: Uint8Array, bufStart: number, final: boolean): RawMessage[] {
+		const done: RawMessage[] = [];
 		this.#carry = EMPTY;
 		let segment = 0;
 		let i = 0;
@@ -46,6 +58,7 @@ export class MboxSplitter {
 				}
 				if (startsWithFrom(buf, i)) {
 					this.#closeMessage(buf.subarray(segment, i), done);
+					this.#start = bufStart + i;
 					segment = i;
 				}
 			}
@@ -60,10 +73,10 @@ export class MboxSplitter {
 	}
 
 	/** A "From " line ends whatever came before it; bytes before the first are a preamble. */
-	#closeMessage(tail: Uint8Array, done: Uint8Array[]): void {
+	#closeMessage(tail: Uint8Array, done: RawMessage[]): void {
 		this.#parts.push(tail);
 		const previous = concat(this.#parts);
-		if (this.#started && hasContent(previous)) done.push(previous);
+		if (this.#started && hasContent(previous)) done.push({ offset: this.#start, bytes: previous });
 		this.#parts = [];
 		this.#started = true;
 	}

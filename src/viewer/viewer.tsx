@@ -29,6 +29,7 @@ export default function Viewer() {
 	const [field, setField] = useState<SearchField>("all");
 	const [selectedId, setSelectedId] = useState<number | null>(null);
 	const [selected, setSelected] = useState<MailMessage | null>(null);
+	const [detailError, setDetailError] = useState<string | null>(null);
 	const [loadingMore, setLoadingMore] = useState(false);
 	const [showOpener, setShowOpener] = useState(false);
 	const deferredQuery = useDeferredValue(query);
@@ -59,14 +60,17 @@ export default function Viewer() {
 	}, [client, phase, messageCount, deferredQuery, field]);
 
 	useEffect(() => {
+		setDetailError(null);
 		if (selectedId === null) {
 			setSelected(null);
 			return;
 		}
 		let cancelled = false;
 		const load = async () => {
-			const message = await client.get(selectedId);
-			if (!cancelled) setSelected(message);
+			const result = await client.get(selectedId);
+			if (cancelled) return;
+			setSelected(result.ok ? result.value : null);
+			setDetailError(result.ok ? null : result.error);
 		};
 		void load();
 		return () => {
@@ -77,6 +81,7 @@ export default function Viewer() {
 	const closeMessage = () => {
 		setSelectedId(null);
 		setSelected(null);
+		setDetailError(null);
 	};
 
 	const openFile = (file: File) => {
@@ -148,7 +153,7 @@ export default function Viewer() {
 					</div>
 				</div>
 			)}
-			<div className={`app-shell${selected ? " detail-open" : ""}`}>
+			<div className={`app-shell${selectedId !== null ? " detail-open" : ""}`}>
 				<aside className="sidebar">
 					<div className="toolbar">
 						<div className="toolbar-top">
@@ -203,13 +208,48 @@ export default function Viewer() {
 				</aside>
 				<main className="detail">
 					{selected ? (
-						<MessageDetail key={selected.id} message={selected} onBack={closeMessage} />
+						<MessageDetail
+							key={selected.id}
+							message={selected}
+							onBack={closeMessage}
+							loadAttachment={(index) => client.attachment(selected.id, index)}
+						/>
 					) : (
-						<div className="detail-empty">Wybierz wiadomość z listy, żeby zobaczyć treść</div>
+						<DetailPlaceholder
+							selected={selectedId !== null}
+							error={detailError}
+							onBack={closeMessage}
+						/>
 					)}
 				</main>
 			</div>
 		</>
+	);
+}
+
+function DetailPlaceholder({
+	selected,
+	error,
+	onBack,
+}: {
+	selected: boolean;
+	error: string | null;
+	onBack: () => void;
+}) {
+	if (!selected) {
+		return <div className="detail-empty">Wybierz wiadomość z listy, żeby zobaczyć treść</div>;
+	}
+	return (
+		<div className="detail-empty">
+			<button type="button" className="back" onClick={onBack}>
+				← Lista
+			</button>
+			<p role={error ? "alert" : "status"}>
+				{error
+					? `Nie udało się odczytać wiadomości z pliku: ${error}. Jeśli plik został przeniesiony, otwórz go ponownie.`
+					: "Wczytywanie wiadomości…"}
+			</p>
+		</div>
 	);
 }
 

@@ -31,7 +31,9 @@ function message({
 }
 
 async function load(bytes: Uint8Array, chunkSize = bytes.length): Promise<Mailbox> {
-	const mailbox = createMailbox();
+	const mailbox = createMailbox({
+		read: async (offset, length) => bytes.slice(offset, offset + length),
+	});
 	for (let offset = 0; offset < bytes.length; offset += chunkSize) {
 		await mailbox.append(bytes.subarray(offset, offset + chunkSize));
 	}
@@ -109,7 +111,7 @@ describe("createMailbox", () => {
 		// "Zażółć" in ISO-8859-2: only valid as text once the declared charset is applied.
 		const body = new Uint8Array([0x5a, 0x61, 0xbf, 0xf3, 0xb3, 0xe6, 0x0a]);
 		const mailbox = await load(new Uint8Array([...head, ...body]));
-		expect(mailbox.get(0)?.text).toBe("Zażółć");
+		expect((await mailbox.get(0))?.text).toBe("Zażółć");
 	});
 
 	it("reads Gmail labels, decoding encoded words", async () => {
@@ -125,13 +127,14 @@ describe("createMailbox", () => {
 			body: "<html><style>p{color:red}</style><p>Cześć &amp; witaj</p></html>",
 		});
 		const mailbox = await load(encoder.encode(html));
-		expect(mailbox.get(0)?.text).toBe("Cześć & witaj");
-		expect(mailbox.get(0)?.html).toContain("<p>Cześć &amp; witaj</p>");
+		const detail = await mailbox.get(0);
+		expect(detail?.text).toBe("Cześć & witaj");
+		expect(detail?.html).toContain("<p>Cześć &amp; witaj</p>");
 	});
 
 	it("fills in placeholders for missing sender and subject", async () => {
 		const mailbox = await load(encoder.encode("From x\n\nbody only\n"));
-		expect(mailbox.get(0)).toMatchObject({ from: "(brak nadawcy)", subject: "(bez tematu)" });
+		expect(await mailbox.get(0)).toMatchObject({ from: "(brak nadawcy)", subject: "(bez tematu)" });
 	});
 });
 
@@ -162,12 +165,112 @@ describe("Mailbox.search", () => {
 		const [summary] = (await load(ARCHIVE)).search(ALL).items;
 		expect(summary).not.toHaveProperty("html");
 		expect(summary).not.toHaveProperty("text");
+		expect(summary).not.toHaveProperty("attachments");
 		expect(summary?.preview).toBe("Spotkanie w czwartek");
 	});
 });
 
 describe("Mailbox.get", () => {
 	it("returns undefined for an id it never issued", async () => {
-		expect((await load(ARCHIVE)).get(99)).toBeUndefined();
+		expect(await (await load(ARCHIVE)).get(99)).toBeUndefined();
+	});
+});
+
+const PNG_BASE64 =
+	"iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAYAAAAfFcSJAAAADUlEQVR42mP8z8BQDwAEhQGAhKmMIQAAAABJRU5ErkJggg==";
+const NOTE = "Notatka z załącznika";
+
+const WITH_ATTACHMENTS = [
+	"From x",
+	"From: Anna <anna@example.com>",
+	"Subject: Z załącznikami",
+	"Date: Sat, 1 Jun 2024 10:00:00 +0000",
+	"MIME-Version: 1.0",
+	'Content-Type: multipart/mixed; boundary="mixed"',
+	"",
+	"--mixed",
+	'Content-Type: multipart/related; boundary="related"',
+	"",
+	"--related",
+	"Content-Type: text/html; charset=utf-8",
+	"",
+	'<p>Logo: <img src="cid:logo@example.com"></p>',
+	"--related",
+	"Content-Type: image/png",
+	"Content-Transfer-Encoding: base64",
+	"Content-ID: <logo@example.com>",
+	"Content-Disposition: inline",
+	"",
+	PNG_BASE64,
+	"--related--",
+	"--mixed",
+	'Content-Type: text/plain; charset=utf-8; name="notatka.txt"',
+	'Content-Disposition: attachment; filename="notatka.txt"',
+	"Content-Transfer-Encoding: base64",
+	"",
+	btoa(String.fromCharCode(...encoder.encode(NOTE))),
+	"--mixed--",
+	"",
+].join("\n");
+
+// The attachment message sits between two others, so re-reading it depends on its offset.
+const WITH_ATTACHMENTS_ARCHIVE = encoder.encode(
+	[message({ subject: "Przed" }), WITH_ATTACHMENTS, message({ subject: "Po" })].join(""),
+);
+
+async function attachmentMessageId(mailbox: Mailbox): Promise<number> {
+	const found = mailbox.search({ ...ALL, field: "subject", text: "Z załącznikami" }).items[0];
+	if (!found) expect.fail("attachment message not indexed");
+	return found.id;
+}
+
+describe("attachments", () => {
+	it("counts downloadable attachments in the summary, not inline images", async () => {
+		const mailbox = await load(WITH_ATTACHMENTS_ARCHIVE);
+		const summary = mailbox.search({ ...ALL, field: "subject", text: "Z załącznikami" }).items[0];
+		expect(summary?.attachmentCount).toBe(1);
+	});
+
+	it("lists every attachment, marking the images the HTML shows inline", async () => {
+		const mailbox = await load(WITH_ATTACHMENTS_ARCHIVE);
+		const detail = await mailbox.get(await attachmentMessageId(mailbox));
+		expect(detail?.attachments).toMatchObject([
+			{ index: 0, filename: "załącznik-1", mimeType: "image/png", inline: true },
+			{
+				index: 1,
+				filename: "notatka.txt",
+				mimeType: "text/plain",
+				size: encoder.encode(NOTE).length,
+				inline: false,
+			},
+		]);
+	});
+
+	it("shows inline images through data: URLs instead of cid: references", async () => {
+		const mailbox = await load(WITH_ATTACHMENTS_ARCHIVE);
+		const detail = await mailbox.get(await attachmentMessageId(mailbox));
+		expect(detail?.html).toContain(`src="data:image/png;base64,${PNG_BASE64}"`);
+		expect(detail?.html).not.toContain("cid:");
+	});
+
+	it.each([7, 64, 4096])(
+		"reads an attachment back from its own message after %i-byte chunks",
+		async (chunkSize) => {
+			const mailbox = await load(WITH_ATTACHMENTS_ARCHIVE, chunkSize);
+			const file = await mailbox.attachment(await attachmentMessageId(mailbox), 1);
+			expect(file?.filename).toBe("notatka.txt");
+			expect(new TextDecoder().decode(file?.content)).toBe(NOTE);
+		},
+	);
+
+	it("returns undefined for an attachment the message does not have", async () => {
+		const mailbox = await load(WITH_ATTACHMENTS_ARCHIVE);
+		expect(await mailbox.attachment(await attachmentMessageId(mailbox), 5)).toBeUndefined();
+	});
+
+	it("finds a message by the name of its attachment", async () => {
+		const mailbox = await load(WITH_ATTACHMENTS_ARCHIVE);
+		const found = mailbox.search({ ...ALL, text: "notatka.txt" }).items.map((m) => m.subject);
+		expect(found).toEqual(["Z załącznikami"]);
 	});
 });

@@ -4,14 +4,20 @@
  */
 
 import type { WorkerRequest, WorkerResponse } from "./protocol";
-import type { MailboxStatus, MailMessage, SearchPage, SearchQuery } from "./types";
+import type { AttachmentFile, MailboxStatus, MailMessage, SearchPage, SearchQuery } from "./types";
+
+/** Reading a message goes back to the file, which may have moved since it was opened. */
+export type Loaded<T> = { ok: true; value: T } | { ok: false; error: string };
 
 export interface MailboxClient {
 	open(file: File): void;
 	search(query: SearchQuery): Promise<SearchPage>;
-	get(messageId: number): Promise<MailMessage | null>;
+	get(messageId: number): Promise<Loaded<MailMessage>>;
+	attachment(messageId: number, index: number): Promise<Loaded<AttachmentFile>>;
 	subscribe(listener: (status: MailboxStatus) => void): () => void;
 }
+
+const NOT_FOUND = "Nie znaleziono wiadomości w archiwum";
 
 export function createMailboxClient(): MailboxClient {
 	const worker = new Worker(new URL("./worker.ts", import.meta.url), { type: "module" });
@@ -53,6 +59,9 @@ export function createMailboxClient(): MailboxClient {
 			worker.postMessage(build(requestId));
 		});
 
+	const loaded = <T>(value: T | null, error: string | null): Loaded<T> =>
+		value ? { ok: true, value } : { ok: false, error: error ?? NOT_FOUND };
+
 	return {
 		open(file) {
 			worker.postMessage({ type: "open", file } satisfies WorkerRequest);
@@ -63,7 +72,20 @@ export function createMailboxClient(): MailboxClient {
 		},
 		async get(messageId) {
 			const response = await request((requestId) => ({ type: "get", requestId, messageId }));
-			return response.type === "get" ? response.message : null;
+			return response.type === "get"
+				? loaded(response.message, response.error)
+				: loaded<MailMessage>(null, null);
+		},
+		async attachment(messageId, index) {
+			const response = await request((requestId) => ({
+				type: "attachment",
+				requestId,
+				messageId,
+				index,
+			}));
+			return response.type === "attachment"
+				? loaded(response.file, response.error)
+				: loaded<AttachmentFile>(null, null);
 		},
 		subscribe(listener) {
 			listeners.add(listener);
