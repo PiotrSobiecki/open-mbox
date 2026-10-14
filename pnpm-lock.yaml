@@ -235,8 +235,8 @@ importers:
         specifier: ^5.0.4
         version: 5.0.4(vitest@5.0.4)
       execa:
-        specifier: ^9.6.1
-        version: 9.6.1
+        specifier: ^10.1.1
+        version: 10.1.1
       knip:
         specifier: ^6.41.0
         version: 6.41.0
