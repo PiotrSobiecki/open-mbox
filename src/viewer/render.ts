@@ -30,7 +30,8 @@ const EMAIL_CSP = "default-src 'none'; img-src data:; style-src 'unsafe-inline';
 const META_TAG = /<meta\b(?:[^>"']|"[^"]*"|'[^']*')*>/gi;
 
 export function toSafeSrcDoc(html: string): string {
-	return `<meta http-equiv="Content-Security-Policy" content="${EMAIL_CSP}">${html.replace(META_TAG, "")}`;
+	const policy = `<meta http-equiv="Content-Security-Policy" content="${EMAIL_CSP}">`;
+	return `${policy}${html.replace(META_TAG, "")}`;
 }
 
 /**
