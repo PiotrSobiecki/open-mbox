@@ -20,8 +20,17 @@ export function formatBytes(bytes: number): string {
  */
 const EMAIL_CSP = "default-src 'none'; img-src data:; style-src 'unsafe-inline'; font-src data:";
 
+/**
+ * Every <meta> tag in the message, quoted attribute values included. Neither the sandbox
+ * nor the policy stops a document from navigating itself, and `<meta http-equiv="refresh">`
+ * does exactly that, so a message carrying one would still report its opening to a remote
+ * host. No <meta> the message brings has a job here: the body is already decoded, and the
+ * policy is the one prepended below.
+ */
+const META_TAG = /<meta\b(?:[^>"']|"[^"]*"|'[^']*')*>/gi;
+
 export function toSafeSrcDoc(html: string): string {
-	return `<meta http-equiv="Content-Security-Policy" content="${EMAIL_CSP}">${html}`;
+	return `<meta http-equiv="Content-Security-Policy" content="${EMAIL_CSP}">${html.replace(META_TAG, "")}`;
 }
 
 /**

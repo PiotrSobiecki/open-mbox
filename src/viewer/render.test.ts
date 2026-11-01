@@ -41,6 +41,22 @@ describe("toSafeSrcDoc", () => {
 	it("leaves the message markup untouched", () => {
 		expect(doc.endsWith('<img src="https://tracker.example/pixel.gif">')).toBe(true);
 	});
+
+	it("drops a meta refresh, which would navigate the frame to a remote host", () => {
+		const refreshing = toSafeSrcDoc(
+			'<meta http-equiv="refresh" content="0; url=https://tracker.example/open?id=1"><p>Hej</p>',
+		);
+		expect(refreshing).not.toContain("refresh");
+		expect(refreshing.endsWith("<p>Hej</p>")).toBe(true);
+	});
+
+	it("drops a meta tag however its attributes are quoted", () => {
+		const tricky = toSafeSrcDoc(
+			`<META content='0;url=https://tracker.example/a>b' HTTP-EQUIV=Refresh><p>Hej</p>`,
+		);
+		expect(tricky).not.toMatch(/tracker\.example/);
+		expect(tricky.endsWith("<p>Hej</p>")).toBe(true);
+	});
 });
 
 describe("viewableType", () => {
