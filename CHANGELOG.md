@@ -1,3 +1,10 @@
+## [1.2.1](https://github.com/PiotrSobiecki/open-mbox/compare/v1.2.0...v1.2.1) (2026-11-02)
+
+
+### Bug Fixes
+
+* **deps:** land the October dependency bumps with TypeScript 6 ([9e0eb3f](https://github.com/PiotrSobiecki/open-mbox/commit/9e0eb3fd544ecee4697479af7499116b3bb64db5)), closes [#3](https://github.com/PiotrSobiecki/open-mbox/issues/3) [#1](https://github.com/PiotrSobiecki/open-mbox/issues/1)
+
 # [1.2.0](https://github.com/PiotrSobiecki/open-mbox/compare/v1.1.0...v1.2.0) (2026-10-14)
 
 
