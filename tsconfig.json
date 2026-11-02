@@ -4,7 +4,6 @@
 	"exclude": ["dist"],
 	"compilerOptions": {
 		"types": ["./worker-configuration.d.ts", "vitest/globals"],
-		"baseUrl": ".",
 		"paths": {
 			"@/*": ["./src/*"]
 		},
