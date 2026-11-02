@@ -1,5 +1,5 @@
 {
-	"$schema": "https://biomejs.dev/schemas/2.5.15/schema.json",
+	"$schema": "https://biomejs.dev/schemas/2.6.3/schema.json",
 	"formatter": {
 		"indentStyle": "tab",
 		"lineWidth": 100,
@@ -21,6 +21,11 @@
 			"enabled": false
 		},
 		"linter": {
+			"enabled": false
+		}
+	},
+	"markdown": {
+		"formatter": {
 			"enabled": false
 		}
 	},
@@ -118,6 +123,7 @@
 			"!.claude/skills",
 			"!.codex",
 			"!CHANGELOG.md",
+			"!pnpm-lock.yaml",
 			"!src/__fixtures__"
 		]
 	},
